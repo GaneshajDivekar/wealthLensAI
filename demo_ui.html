@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+      <title>WealthLens - AI Financial Portfolio Analysis System</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      color: #333;
+      overflow: hidden;
+    }
+    .chat-container {
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+    }
+    .chat-header {
+      background: linear-gradient(135deg, #2c3e50, #34495e);
+      padding: 20px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1.4em;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      background: #f8f9fa;
+    }
+    .msg {
+      max-width: 70%;
+      padding: 15px 20px;
+      border-radius: 15px;
+      font-size: 15px;
+      line-height: 1.5;
+      animation: fadeIn 0.3s ease;
+      white-space: pre-wrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .bot {
+      align-self: flex-start;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border-bottom-left-radius: 5px;
+    }
+    .user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #2c3e50, #34495e);
+      color: #fff;
+      border-bottom-right-radius: 5px;
+    }
+    .source-info {
+      font-size: 12px;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 500;
+    }
+    .intent-info {
+      font-size: 11px;
+      margin-top: 6px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 400;
+    }
+    .chat-input {
+      display: flex;
+      padding: 20px;
+      background: #fff;
+      border-top: 1px solid #e9ecef;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .chat-input input {
+      flex: 1;
+      padding: 15px 20px;
+      border: 2px solid #e9ecef;
+      border-radius: 25px;
+      background: #fff;
+      color: #333;
+      outline: none;
+      font-size: 16px;
+      transition: border-color 0.3s ease;
+    }
+    .chat-input input:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .chat-input button {
+      margin-left: 15px;
+      padding: 15px 25px;
+      border: none;
+      border-radius: 25px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 16px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      transition: all 0.3s ease;
+    }
+    .chat-input button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    .chat-input button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .typing {
+      font-style: italic;
+      font-size: 14px;
+      color: #667eea;
+      animation: pulse 1.5s infinite;
+      padding: 10px 20px;
+      background: rgba(102, 126, 234, 0.1);
+      border-radius: 15px;
+      align-self: flex-start;
+    }
+    .error {
+      color: #e74c3c;
+      font-size: 14px;
+      margin-top: 6px;
+      padding: 10px;
+      background: rgba(231, 76, 60, 0.1);
+      border-radius: 8px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .welcome-message {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    .welcome-message h3 {
+      margin: 0 0 15px 0;
+      font-size: 1.3em;
+    }
+    .welcome-message ul {
+      text-align: left;
+      margin: 0;
+      padding-left: 20px;
+    }
+    .welcome-message li {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      🤖 WealthLens - AI Financial Portfolio Analysis System
+    </div>
+    
+    <div class="chat-messages" id="chat">
+    </div>
+    
+    <div class="chat-input">
+      <input id="input" type="text" placeholder="Ask about your portfolio or type 'hello' to get started...">
+      <button id="sendBtn" onclick="send()">Send</button>
+    </div>
+  </div>
+
+      <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+      const chat = document.getElementById('chat');
+      const input = document.getElementById('input');
+      const sendBtn = document.getElementById('sendBtn');
+      let sessionId = null;
+
+    // Greeting patterns
+    const greetingPatterns = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'];
+
+    function isGreeting(text) {
+      return greetingPatterns.some(pattern => 
+        text.toLowerCase().includes(pattern.toLowerCase())
+      );
+    }
+
+    function sendGreeting() {
+      const greetingResponse = `Hello! I am WealthLens, your AI Finance Analyzer. How may I help you today?
+
+I can assist you with:
+• Portfolio analysis and performance tracking
+• Investment recommendations and market insights
+• Risk assessment and volatility analysis
+• Technical and fundamental analysis
+• News impact on your investments
+• Personal financial queries
+
+What would you like to know about your portfolio?`;
+      
+      // Show thinking animation first
+      const thinking = document.createElement('div');
+      thinking.className = 'typing';
+      thinking.innerText = "◉ WealthLens is analyzing...";
+      chat.appendChild(thinking);
+      chat.scrollTop = chat.scrollHeight;
+      
+      // Remove thinking and show result after 1 second
+      setTimeout(() => {
+        thinking.remove();
+        addMessage(greetingResponse, 'bot');
+      }, 1000);
+    }
+
+    async function send() {
+      const text = input.value.trim();
+      if (!text) return;
+      
+      addMessage(text, 'user');
+      input.value = '';
+      sendBtn.disabled = true;
+      
+      // Check if it's a greeting
+      if (isGreeting(text)) {
+        sendGreeting();
+        sendBtn.disabled = false;
+        return;
+      }
+      
+      await botReply(text);
+      sendBtn.disabled = false;
+    }
+
+    function addMessage(text, sender, sourceInfo = null, intentInfo = null) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + sender;
+      
+      // Check if text contains HTML (charts)
+      if (text.includes('<div') || text.includes('<script')) {
+        div.innerHTML = text;
+      } else {
+        div.innerText = text;
+      }
+      
+      if (sourceInfo) {
+        const sourceDiv = document.createElement('div');
+        sourceDiv.className = 'source-info';
+        sourceDiv.innerHTML = `🔍 Source: ${sourceInfo}`;
+        div.appendChild(sourceDiv);
+      }
+      
+      if (intentInfo) {
+        const intentDiv = document.createElement('div');
+        intentDiv.className = 'intent-info';
+        intentDiv.innerHTML = `🎯 Intent: ${intentInfo}`;
+        div.appendChild(intentDiv);
+      }
+      
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      
+      // Reinitialize Plotly charts if present
+      if (text.includes('plotly')) {
+        setTimeout(() => {
+          const charts = div.querySelectorAll('[id^="plotly"]');
+          charts.forEach(chart => {
+            if (window.Plotly) {
+              window.Plotly.newPlot(chart.id, chart.data, chart.layout);
+            }
+          });
+        }, 100);
+      }
+    }
+
+    async function botReply(userText) {
+                  const typing = document.createElement('div');
+            typing.className = 'typing';
+            typing.innerText = "◉ WealthLens is analyzing...";
+      chat.appendChild(typing);
+      chat.scrollTop = chat.scrollHeight;
+
+      try {
+        const response = await fetch('http://localhost:8000/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: userText,
+            language: 'normal',
+            session_id: sessionId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Remove typing indicator
+        typing.remove();
+        
+        if (data.success) {
+          // Update session ID
+          sessionId = data.session_id;
+          
+          // Format source information
+          let sourceInfo = '';
+          if (data.sources && data.sources.length > 0) {
+            const agentNames = {
+              'portfolio_analysis': 'Portfolio Analyzer',
+              'investment_advice': 'Investment Advisor',
+              'risk_assessment': 'Risk Analyzer',
+              'market_research': 'Market Research',
+              'technical_analysis': 'Technical Analyzer',
+              'sentiment_analysis': 'Sentiment Analyzer',
+              'news_analysis': 'News Analyzer',
+              'personal_info': 'RAG Agent'
+            };
+            sourceInfo = data.sources.map(s => agentNames[s] || s).join(', ');
+          }
+          
+          // Format intent information
+          let intentInfo = '';
+          if (data.intent) {
+            const intentNames = {
+              'portfolio_analysis': 'Portfolio Analysis',
+              'investment_advice': 'Investment Advice',
+              'risk_assessment': 'Risk Assessment',
+              'market_research': 'Market Research',
+              'technical_analysis': 'Technical Analysis',
+              'sentiment_analysis': 'Sentiment Analysis',
+              'news_analysis': 'News Analysis',
+              'personal_info': 'Personal Information'
+            };
+            intentInfo = intentNames[data.intent] || data.intent;
+          }
+          
+          // Add 1 second delay before showing result
+          setTimeout(() => {
+            addMessage(data.response, 'bot', sourceInfo, intentInfo);
+          }, 1000);
+        } else {
+          addMessage("❌ Sorry, I couldn't process your request. Please try again.", 'bot');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        typing.remove();
+        addMessage("❌ Connection error. Please make sure the server is running on localhost:8000", 'bot');
+      }
+    }
+
+    input.addEventListener("keypress", e => {
+      if (e.key === "Enter" && !sendBtn.disabled) send();
+    });
+
+    // Focus on input when page loads
+    window.addEventListener('load', () => {
+      input.focus();
+      
+      // Test server connection
+      fetch('http://localhost:8000/health')
+        .then(response => {
+          if (!response.ok) {
+            addMessage("⚠️ Warning: Server connection issues detected. Some features may not work.", 'bot');
+          }
+        })
+        .catch(error => {
+          addMessage("⚠️ Warning: Cannot connect to server. Please start the server with 'python main.py'", 'bot');
+        });
+    });
+  </script>
+</body>
+</html>
