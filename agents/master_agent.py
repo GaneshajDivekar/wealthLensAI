@@ -38,16 +38,21 @@ class MasterAgent(BaseAgent):
                 "portfolio", "performance", "returns", "value", "summary",
                 "penny stocks", "sector", "country", "risk", "volatility",
                 "holdings", "assets", "investment", "stocks", "funds",
+                # Price related
+                "price", "current price", "stock price", "share price", "market price",
+                "what is the price", "how much is", "current value", "market value",
                 # Variations and synonyms
                 "my portfolio", "portfolio status", "portfolio value", "portfolio summary",
                 "show portfolio", "portfolio overview", "portfolio performance",
                 "my stocks", "my investments", "investment summary", "stock summary",
                 "portfolio breakdown", "portfolio analysis", "portfolio report",
                 "show me my portfolio", "what is my portfolio", "portfolio details",
+                "price of", "current price of", "stock price of", "share price of",
+                "what is the current price", "how much is the price", "price for",
                 # Common misspellings
                 "portfolo", "portfollio", "portfoli", "perfomance", "retrns", "val",
                 "summry", "peny stocks", "sctr", "cntry", "rsk", "volatilty",
-                "holdngs", "assest", "investmnt", "stoks", "fnds"
+                "holdngs", "assest", "investmnt", "stoks", "fnds", "prce", "currnt prce"
             ],
             "news_analysis": [
                 # News related
@@ -217,6 +222,16 @@ class MasterAgent(BaseAgent):
                 "confidence": 1.0,
                 "secondary": [],
                 "all_scores": {"personal_info": 1.0}
+            }
+        
+        # Special case for price queries
+        if ("price" in query_lower and ("current" in query_lower or "what is" in query_lower or "how much" in query_lower)):
+            print(f"DEBUG: Price query special case triggered for query: '{query}'")
+            return {
+                "primary": "portfolio_analysis",
+                "confidence": 1.0,
+                "secondary": [],
+                "all_scores": {"portfolio_analysis": 1.0}
             }
         
         # Clean and normalize query
