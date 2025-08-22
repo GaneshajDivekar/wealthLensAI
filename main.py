@@ -14,7 +14,7 @@ import json
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Financial Portfolio Analysis System",
+    title="WealthLens - AI Financial Portfolio Analysis System",
     description="AI-powered financial portfolio analysis with multiple agents",
     version="1.0.0"
 )
@@ -69,12 +69,15 @@ async def root():
         "message": "WealthLens - AI Financial Portfolio Analysis System API",
         "version": "1.0.0",
         "status": "running",
+        "authentication": "disabled",
         "endpoints": {
             "chat": "/chat",
             "portfolio": "/portfolio",
             "agents": "/agents/status",
-            "health": "/health"
-        }
+            "health": "/health",
+            "examples": "/examples"
+        },
+        "demo_mode": True
     }
 
 @app.post("/chat", response_model=ChatResponse)
@@ -89,6 +92,7 @@ async def chat(request: ChatRequest):
         
         # Store session data
         sessions[session_id] = {
+            "user": "demo",
             "last_query": request.message,
             "last_response": result["response"],
             "timestamp": datetime.now().isoformat(),
@@ -192,108 +196,6 @@ async def get_agent_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting agent status: {str(e)}")
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "agents": len(agent_system.master_agent.get_agent_status())
-    }
-
-@app.get("/sessions/{session_id}")
-async def get_session(session_id: str):
-    """Get session information"""
-    if session_id not in sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    return {
-        "session_id": session_id,
-        "data": sessions[session_id]
-    }
-
-@app.delete("/sessions/{session_id}")
-async def delete_session(session_id: str):
-    """Delete session"""
-    if session_id in sessions:
-        del sessions[session_id]
-        return {"message": "Session deleted successfully"}
-    else:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-@app.get("/examples")
-async def get_example_queries():
-    """Get example queries for users"""
-    return {
-        "portfolio_queries": [
-            "Show me my portfolio summary",
-            "What are my penny stocks?",
-            "Analyze my portfolio performance",
-            "Show sector breakdown",
-            "What's my portfolio value?"
-        ],
-        "investment_queries": [
-            "What should I buy?",
-            "Give me investment recommendations",
-            "Where should I invest?",
-            "What stocks should I sell?",
-            "Hold recommendations"
-        ],
-        "news_queries": [
-            "How does news affect my portfolio?",
-            "Market news analysis",
-            "Traffic issues impact on stocks",
-            "Sector news"
-        ],
-        "risk_queries": [
-            "Analyze my portfolio risk",
-            "What's my risk level?",
-            "Risk assessment",
-            "Portfolio volatility"
-        ],
-        "technical_queries": [
-            "Technical analysis of my stocks",
-            "Chart patterns",
-            "RSI analysis",
-            "Support and resistance levels"
-        ],
-        "sentiment_queries": [
-            "Market sentiment analysis",
-            "Social media sentiment",
-            "Investor mood",
-            "Sentiment trends"
-        ],
-        "market_research_queries": [
-            "Market research on my sectors",
-            "Industry analysis",
-            "Market trends",
-            "Sector outlook"
-        ],
-        "personal_queries": [
-            "Who is Ganesh Divekar?",
-            "What's Ganesh's contact number?",
-            "Tell me about Ganesh's work",
-            "What's Ganesh's expertise?"
-        ],
-        "language_options": [
-            "normal",
-            "genz"
-        ]
-    }
-
-@app.post("/intent-analysis")
-async def analyze_intent(request: ChatRequest):
-    """Analyze intent of a query"""
-    try:
-        intent_analysis = agent_system.master_agent.get_intent_analysis(request.message)
-        return {
-            "query": request.message,
-            "intent_analysis": intent_analysis,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error analyzing intent: {str(e)}")
-
 @app.get("/agents/list")
 async def list_agents():
     """List all available agents"""
@@ -307,82 +209,140 @@ async def list_agents():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing agents: {str(e)}")
 
-@app.post("/sources")
-async def get_sources_for_query(request: ChatRequest):
-    """Get source information for a query"""
+@app.post("/intent-analysis")
+async def analyze_intent(request: ChatRequest):
+    """Analyze intent of a query"""
     try:
-        intent_analysis = agent_system.master_agent.get_intent_analysis(request.message)
-        agent_mapping = {
-            "portfolio_analysis": "Portfolio Analyzer",
-            "news_analysis": "News Analyzer", 
-            "investment_advice": "Investment Advisor",
-            "personal_info": "RAG Agent",
-            "risk_assessment": "Risk Analyzer",
-            "market_research": "Market Research",
-            "technical_analysis": "Technical Analyzer",
-            "sentiment_analysis": "Sentiment Analyzer"
-        }
-        
-        primary_intent = intent_analysis["intent_analysis"]["primary"]
-        primary_agent = agent_mapping.get(primary_intent, "Unknown")
-        
+        intent_analysis = agent_system.master_agent._classify_intent(request.message)
         return {
             "query": request.message,
-            "primary_intent": primary_intent,
-            "primary_agent": primary_agent,
-            "confidence": intent_analysis["intent_analysis"]["confidence"],
-            "all_intents": intent_analysis["intent_analysis"]["all_scores"],
-            "agent_mapping": agent_mapping,
+            "intent_analysis": intent_analysis,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing intent: {str(e)}")
+
+@app.get("/sources")
+async def get_sources():
+    """Get source information for queries"""
+    try:
+        return {
+            "available_sources": [
+                "Portfolio Analyzer",
+                "Investment Advisor", 
+                "Risk Analyzer",
+                "Market Research",
+                "Technical Analyzer",
+                "Sentiment Analyzer",
+                "News Analyzer",
+                "RAG Agent"
+            ],
+            "total_sources": 8,
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting sources: {str(e)}")
 
+@app.get("/examples")
+async def get_examples():
+    """Get example queries for testing"""
+    return {
+        "portfolio_analysis": [
+            "Show me my portfolio summary",
+            "What is my portfolio value?",
+            "Analyze my portfolio performance",
+            "Show sector breakdown",
+            "What are my penny stocks?"
+        ],
+        "investment_advice": [
+            "What should I buy?",
+            "Give me investment recommendations",
+            "What should I sell?",
+            "What should I hold?",
+            "Analyze my investment strategy"
+        ],
+        "risk_assessment": [
+            "What is my portfolio risk level?",
+            "Analyze my portfolio risk",
+            "How diversified is my portfolio?",
+            "What are the risk factors?"
+        ],
+        "market_research": [
+            "Market research on my sectors",
+            "Industry analysis",
+            "Market trends",
+            "Growth analysis"
+        ],
+        "technical_analysis": [
+            "Technical analysis of my stocks",
+            "Chart patterns",
+            "Technical indicators",
+            "Support and resistance levels"
+        ],
+        "sentiment_analysis": [
+            "Market sentiment analysis",
+            "Investor sentiment",
+            "Social media sentiment",
+            "Market psychology"
+        ],
+        "news_analysis": [
+            "How does traffic issues between India and USA affect my stocks?",
+            "News impact on my portfolio",
+            "Event-driven analysis",
+            "Market reaction to news"
+        ],
+        "personal_info": [
+            "Who am I?",
+            "Tell me about Ganesh Divekar",
+            "What is Ganesh's contact number?",
+            "Who is Ganesh?"
+        ]
+    }
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "agents": len(agent_system.master_agent.get_agent_status()),
+        "authentication": "disabled"
+    }
+
+# Chart and data endpoints
 @app.get("/charts/portfolio")
 async def get_portfolio_charts():
     """Get portfolio charts"""
     try:
         portfolio_data = get_portfolio_data()
-        
-        pie_chart = chart_service.generate_portfolio_pie_chart(portfolio_data)
-        performance_chart = chart_service.generate_portfolio_performance_chart(portfolio_data)
-        risk_chart = chart_service.generate_risk_metrics_chart(portfolio_data)
-        sentiment_chart = chart_service.generate_market_sentiment_chart(portfolio_data)
-        
+        charts = chart_service.generate_portfolio_charts(portfolio_data)
         return {
-            "pie_chart": pie_chart,
-            "performance_chart": performance_chart,
-            "risk_chart": risk_chart,
-            "sentiment_chart": sentiment_chart,
+            "charts": charts,
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating charts: {str(e)}")
 
 @app.get("/charts/stock/{symbol}")
-async def get_stock_chart(symbol: str, period: str = "6mo"):
-    """Get stock price chart"""
+async def get_stock_charts(symbol: str):
+    """Get stock-specific charts"""
     try:
-        chart_html = chart_service.generate_stock_price_chart(symbol, period)
+        charts = chart_service.generate_stock_charts(symbol)
         return {
             "symbol": symbol,
-            "period": period,
-            "chart": chart_html,
+            "charts": charts,
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating stock chart: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating stock charts: {str(e)}")
 
 @app.get("/data/live-prices")
 async def get_live_prices():
     """Get live stock prices"""
     try:
-        portfolio_data = get_portfolio_data()
-        symbols = [stock["symbol"] for stock in portfolio_data["stocks"]]
-        live_prices = real_time_service.get_live_prices(symbols)
-        
+        prices = real_time_service.get_live_prices()
         return {
-            "prices": live_prices,
+            "prices": prices,
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
@@ -392,25 +352,14 @@ async def get_live_prices():
 async def get_stock_info(symbol: str):
     """Get comprehensive stock information"""
     try:
-        stock_info = real_time_service.get_stock_info(symbol)
-        technical_indicators = real_time_service.calculate_technical_indicators(symbol)
-        market_sentiment = real_time_service.get_market_sentiment(symbol)
-        
+        info = real_time_service.get_comprehensive_stock_info(symbol)
         return {
             "symbol": symbol,
-            "stock_info": stock_info,
-            "technical_indicators": technical_indicators,
-            "market_sentiment": market_sentiment,
+            "info": info,
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching stock info: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

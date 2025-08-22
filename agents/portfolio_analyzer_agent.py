@@ -35,6 +35,15 @@ class PortfolioAnalyzerAgent(BaseAgent):
         elif "country analysis" in query or "geographic breakdown" in query:
             return self._analyze_countries(user_language)
         
+        elif "enlist stocks" in query or "list stocks" in query or "show stocks" in query:
+            return self._enlist_stocks(user_language)
+        
+        elif "enlist sectors" in query or "list sectors" in query or "show sectors" in query:
+            return self._enlist_sectors(user_language)
+        
+        elif "enlist countries" in query or "list countries" in query or "show countries" in query:
+            return self._enlist_countries(user_language)
+        
         elif "performance" in query or "returns" in query:
             return self._analyze_performance(summary, user_language)
         
@@ -351,3 +360,152 @@ class PortfolioAnalyzerAgent(BaseAgent):
             return "Good diversification. Moderate risk."
         else:
             return "Consider diversifying more to reduce risk."
+    
+    def _enlist_stocks(self, language: str) -> Dict[str, Any]:
+        """List all stocks in the portfolio"""
+        stocks = PORTFOLIO_DATA["stocks"]
+        
+        if language == "genz":
+            response = f"📈 Your Stock Collection ({len(stocks)} stocks) 📈\n\n"
+            for i, stock in enumerate(stocks, 1):
+                pnl = (stock['current_price'] - stock['avg_price']) * stock['quantity']
+                pnl_pct = ((stock['current_price'] - stock['avg_price']) / stock['avg_price']) * 100
+                emoji = "🟢" if pnl >= 0 else "🔴"
+                response += f"{i}. {emoji} {stock['name']} ({stock['symbol']})\n"
+                response += f"   💰 Qty: {stock['quantity']} | Price: ₹{stock['current_price']:.2f}\n"
+                response += f"   🏢 {stock['sector']} | 🌍 {stock['country']}\n"
+                response += f"   📊 P&L: ₹{pnl:,.0f} ({pnl_pct:+.2f}%)\n\n"
+        else:
+            response = f"Portfolio Stocks ({len(stocks)} stocks):\n\n"
+            for i, stock in enumerate(stocks, 1):
+                pnl = (stock['current_price'] - stock['avg_price']) * stock['quantity']
+                pnl_pct = ((stock['current_price'] - stock['avg_price']) / stock['avg_price']) * 100
+                status = "▲" if pnl >= 0 else "▼"
+                response += f"{i}. {status} {stock['name']} ({stock['symbol']})\n"
+                response += f"   Quantity: {stock['quantity']} | Current Price: ₹{stock['current_price']:.2f}\n"
+                response += f"   Sector: {stock['sector']} | Country: {stock['country']}\n"
+                response += f"   P&L: ₹{pnl:,.0f} ({pnl_pct:+.2f}%)\n\n"
+        
+        return {
+            "agent": self.name,
+            "response": response + "📊 Source: Portfolio Analyzer Agent",
+            "data": {"stocks": stocks, "total_stocks": len(stocks)},
+            "type": "stocks_list"
+        }
+    
+    def _enlist_sectors(self, language: str) -> Dict[str, Any]:
+        """List all sectors in the portfolio"""
+        sectors = {}
+        for stock in PORTFOLIO_DATA["stocks"]:
+            sector = stock["sector"]
+            if sector not in sectors:
+                sectors[sector] = {
+                    "stocks": [],
+                    "total_value": 0,
+                    "total_investment": 0,
+                    "stock_count": 0
+                }
+            sectors[sector]["stocks"].append(stock["name"])
+            sectors[sector]["total_value"] += stock["quantity"] * stock["current_price"]
+            sectors[sector]["total_investment"] += stock["quantity"] * stock["avg_price"]
+            sectors[sector]["stock_count"] += 1
+        
+        # Calculate sector percentages
+        total_portfolio_value = sum(s["total_value"] for s in sectors.values())
+        
+        if language == "genz":
+            response = f"🏢 Your Sector Breakdown ({len(sectors)} sectors) 🏢\n\n"
+            for i, (sector, data) in enumerate(sectors.items(), 1):
+                pnl = data["total_value"] - data["total_investment"]
+                pnl_pct = (pnl / data["total_investment"]) * 100 if data["total_investment"] > 0 else 0
+                allocation_pct = (data["total_value"] / total_portfolio_value) * 100
+                emoji = "🟢" if pnl >= 0 else "🔴"
+                response += f"{i}. {emoji} {sector}\n"
+                response += f"   💰 Value: ₹{data['total_value']:,.0f} ({allocation_pct:.1f}%)\n"
+                response += f"   📊 Stocks: {data['stock_count']} | P&L: ₹{pnl:,.0f} ({pnl_pct:+.2f}%)\n"
+                response += f"   🏢 Companies: {', '.join(data['stocks'][:3])}"
+                if len(data['stocks']) > 3:
+                    response += f" +{len(data['stocks'])-3} more"
+                response += "\n\n"
+        else:
+            response = f"Portfolio Sectors ({len(sectors)} sectors):\n\n"
+            for i, (sector, data) in enumerate(sectors.items(), 1):
+                pnl = data["total_value"] - data["total_investment"]
+                pnl_pct = (pnl / data["total_investment"]) * 100 if data["total_investment"] > 0 else 0
+                allocation_pct = (data["total_value"] / total_portfolio_value) * 100
+                status = "▲" if pnl >= 0 else "▼"
+                response += f"{i}. {status} {sector}\n"
+                response += f"   Value: ₹{data['total_value']:,.0f} ({allocation_pct:.1f}% of portfolio)\n"
+                response += f"   Stocks: {data['stock_count']} | P&L: ₹{pnl:,.0f} ({pnl_pct:+.2f}%)\n"
+                response += f"   Companies: {', '.join(data['stocks'][:3])}"
+                if len(data['stocks']) > 3:
+                    response += f" and {len(data['stocks'])-3} more"
+                response += "\n\n"
+        
+        return {
+            "agent": self.name,
+            "response": response + "📊 Source: Portfolio Analyzer Agent",
+            "data": {"sectors": sectors, "total_sectors": len(sectors)},
+            "type": "sectors_list"
+        }
+    
+    def _enlist_countries(self, language: str) -> Dict[str, Any]:
+        """List all countries in the portfolio"""
+        countries = {}
+        for stock in PORTFOLIO_DATA["stocks"]:
+            country = stock["country"]
+            if country not in countries:
+                countries[country] = {
+                    "stocks": [],
+                    "sectors": set(),
+                    "total_value": 0,
+                    "total_investment": 0,
+                    "stock_count": 0
+                }
+            countries[country]["stocks"].append(stock["name"])
+            countries[country]["sectors"].add(stock["sector"])
+            countries[country]["total_value"] += stock["quantity"] * stock["current_price"]
+            countries[country]["total_investment"] += stock["quantity"] * stock["avg_price"]
+            countries[country]["stock_count"] += 1
+        
+        # Calculate country percentages
+        total_portfolio_value = sum(c["total_value"] for c in countries.values())
+        
+        if language == "genz":
+            response = f"🌍 Your Geographic Breakdown ({len(countries)} countries) 🌍\n\n"
+            for i, (country, data) in enumerate(countries.items(), 1):
+                pnl = data["total_value"] - data["total_investment"]
+                pnl_pct = (pnl / data["total_investment"]) * 100 if data["total_investment"] > 0 else 0
+                allocation_pct = (data["total_value"] / total_portfolio_value) * 100
+                emoji = "🟢" if pnl >= 0 else "🔴"
+                flag = "🇮🇳" if country == "India" else "🇺🇸"
+                response += f"{i}. {emoji} {flag} {country}\n"
+                response += f"   💰 Value: ₹{data['total_value']:,.0f} ({allocation_pct:.1f}%)\n"
+                response += f"   📊 Stocks: {data['stock_count']} | Sectors: {len(data['sectors'])}\n"
+                response += f"   📈 P&L: ₹{pnl:,.0f} ({pnl_pct:+.2f}%)\n"
+                response += f"   🏢 Top Companies: {', '.join(data['stocks'][:3])}"
+                if len(data['stocks']) > 3:
+                    response += f" +{len(data['stocks'])-3} more"
+                response += "\n\n"
+        else:
+            response = f"Portfolio Countries ({len(countries)} countries):\n\n"
+            for i, (country, data) in enumerate(countries.items(), 1):
+                pnl = data["total_value"] - data["total_investment"]
+                pnl_pct = (pnl / data["total_investment"]) * 100 if data["total_investment"] > 0 else 0
+                allocation_pct = (data["total_value"] / total_portfolio_value) * 100
+                status = "▲" if pnl >= 0 else "▼"
+                response += f"{i}. {status} {country}\n"
+                response += f"   Value: ₹{data['total_value']:,.0f} ({allocation_pct:.1f}% of portfolio)\n"
+                response += f"   Stocks: {data['stock_count']} | Sectors: {len(data['sectors'])}\n"
+                response += f"   P&L: ₹{pnl:,.0f} ({pnl_pct:+.2f}%)\n"
+                response += f"   Companies: {', '.join(data['stocks'][:3])}"
+                if len(data['stocks']) > 3:
+                    response += f" and {len(data['stocks'])-3} more"
+                response += "\n\n"
+        
+        return {
+            "agent": self.name,
+            "response": response + "📊 Source: Portfolio Analyzer Agent",
+            "data": {"countries": countries, "total_countries": len(countries)},
+            "type": "countries_list"
+        }

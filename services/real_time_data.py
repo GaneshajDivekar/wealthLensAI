@@ -12,30 +12,46 @@ class RealTimeDataService:
     
     def __init__(self):
         self.cache = {}
-        self.cache_duration = 300  # 5 minutes
+        self.cache_duration = 600  # 10 minutes (increased for demo)
         self.last_update = {}
+        self.request_count = 0
+        self.last_request_time = datetime.now()
+        self.max_requests_per_minute = 10  # Conservative limit
     
     def get_live_prices(self, symbols: List[str]) -> Dict[str, float]:
         """Fetch real-time stock prices with rate limiting"""
         current_time = datetime.now()
         live_prices = {}
         
-        # Add delay between requests to avoid rate limiting
+        # Enhanced rate limiting and caching
         import time
         
         for i, symbol in enumerate(symbols):
-            # Check cache first
+            # Check cache first (priority for demo)
             if (symbol in self.cache and 
                 symbol in self.last_update and 
                 (current_time - self.last_update[symbol]).seconds < self.cache_duration):
                 live_prices[symbol] = self.cache[symbol]
                 continue
             
+            # Rate limiting check
+            time_since_last = (current_time - self.last_request_time).seconds
+            if time_since_last < 60:  # Within last minute
+                if self.request_count >= self.max_requests_per_minute:
+                    # Use fallback data to avoid rate limiting
+                    live_prices[symbol] = self._get_fallback_price(symbol)
+                    continue
+            else:
+                # Reset counter for new minute
+                self.request_count = 0
+                self.last_request_time = current_time
+            
             try:
-                # Add delay between requests (0.5 seconds)
+                # Add delay between requests (1 second for demo)
                 if i > 0:
-                    time.sleep(0.5)
+                    time.sleep(1.0)
                 
+                self.request_count += 1
                 ticker = yf.Ticker(symbol)
                 price = ticker.info.get('regularMarketPrice')
                 if price and price > 0:
@@ -44,28 +60,32 @@ class RealTimeDataService:
                     self.last_update[symbol] = current_time
                 else:
                     # Fallback to cached price or default
-                    live_prices[symbol] = self.cache.get(symbol, 0)
+                    live_prices[symbol] = self._get_fallback_price(symbol)
             except Exception as e:
                 print(f"Error fetching price for {symbol}: {e}")
                 # Use fallback prices for demo
-                fallback_prices = {
-                    "RELIANCE.NS": 2650,
-                    "TCS.NS": 3191,
-                    "INFY.NS": 1500,
-                    "HDFCBANK.NS": 1736,
-                    "ICICIBANK.NS": 1020,
-                    "AAPL": 175.0,
-                    "MSFT": 350.0,
-                    "GOOGL": 140.0,
-                    "AMZN": 145.0,
-                    "TSLA": 220.0,
-                    "SUZLON.NS": 47.5,
-                    "JPASSOCIAT.NS": 62.0,
-                    "YESBANK.NS": 15.0
-                }
-                live_prices[symbol] = fallback_prices.get(symbol, self.cache.get(symbol, 0))
+                live_prices[symbol] = self._get_fallback_price(symbol)
         
         return live_prices
+    
+    def _get_fallback_price(self, symbol: str) -> float:
+        """Get fallback price for demo purposes"""
+        fallback_prices = {
+            "RELIANCE.NS": 2650,
+            "TCS.NS": 3191,
+            "INFY.NS": 1500,
+            "HDFCBANK.NS": 1736,
+            "ICICIBANK.NS": 1020,
+            "AAPL": 175.0,
+            "MSFT": 350.0,
+            "GOOGL": 140.0,
+            "AMZN": 145.0,
+            "TSLA": 220.0,
+            "SUZLON.NS": 47.5,
+            "JPASSOCIAT.NS": 62.0,
+            "YESBANK.NS": 15.0
+        }
+        return fallback_prices.get(symbol, self.cache.get(symbol, 0))
     
     def get_stock_info(self, symbol: str) -> Dict[str, Any]:
         """Get comprehensive stock information"""

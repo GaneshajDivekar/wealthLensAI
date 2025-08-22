@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
 from agents.base_agent import BaseAgent
 from data.user_profile import get_user_info, get_knowledge_base
-from config import Config
+import config
 
 class RAGAgent(BaseAgent):
     """Agent for answering general questions about the user using RAG"""

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List
 from langchain_mistralai import ChatMistralAI
-from config import Config
+import config
 
 class BaseAgent(ABC):
     """Base class for all agents in the system"""
@@ -11,7 +11,7 @@ class BaseAgent(ABC):
         self.description = description
         self.llm = ChatMistralAI(
             model="mistral-large-latest",
-            mistral_api_key=Config.MISTRAL_API_KEY,
+            mistral_api_key=config.MISTRAL_API_KEY,
             temperature=0.7
         )
         self.memory = []
