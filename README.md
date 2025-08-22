@@ -14,7 +14,7 @@ A sophisticated financial portfolio analysis system powered by FastAPI, Mistral 
 - **Enhanced Intent Classification** with fuzzy matching and typo tolerance
 
 ### 📊 **Portfolio Analysis**
-- **Hardcoded Portfolio** (~80 Lacs INR) with Indian & US stocks
+- **Hardcoded Portfolio**
 - **Penny Stock Identification** and analysis
 - **Sector & Geographic Breakdown**
 - **Risk Assessment** with volatility analysis
