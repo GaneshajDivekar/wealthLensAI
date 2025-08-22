@@ -13,7 +13,7 @@ A sophisticated financial portfolio analysis system powered by FastAPI, Mistral 
 - **Real-time Source Tracking** for every response
 
 ### 📊 **Portfolio Analysis**
-- **Hardcoded Portfolio** (~80 Lacs INR) with Indian & US stocks
+- **Hardcoded Portfolio**
 - **Penny Stock Identification** and analysis
 - **Sector & Geographic Breakdown**
 - **Risk Assessment** with volatility analysis
